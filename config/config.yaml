@@ -1,0 +1,209 @@
+# =====================================================================================
+# ocrscreen — full analysis configuration (RWPE-1 + HMEC, all modules)
+#
+# Run from the repository root:
+#   snakemake --use-conda --cores N --configfile config/config.yaml
+#
+# All relative paths are relative to the repository root. Every key is documented in
+# config/README.md and validated against workflow/schemas/config.schema.yaml.
+# =====================================================================================
+
+# -------------------------------------------------------------------------------------
+# Modules to run. Comment a line out to disable that module. A module only adds its
+# rules and final targets; inputs produced by a disabled module must already exist.
+# -------------------------------------------------------------------------------------
+modules:
+  # --- CRISPRi RSL screen ---
+  - crispr_library          # sgRNA library + OCR coordinates per cell line
+  - RSL_counter             # CrisprCounter RSL counting, RSL binning, SSMD
+  - pathway                 # OCR-level MAGeCK pathway (GSEA) + SSMD/ES replicate figure
+  - ssmd2bed                # SSMD scores as BED (sgRNA and OCR level)
+  - JACKS                   # JACKS on RSL synthetic replicates -> CRISPRi enhancer activity
+  - GenomeTracks            # pyGenomeTracks plots of CRISPRi enhancer activity
+  # --- Hi-C (raw reads -> merged contact maps) ---
+  - sra                     # download Hi-C runs from SRA
+  - bwa                     # bwa-mem2 -SP5M + pairtools parse/sort per run
+  - pairtools               # per-library merge/dedup/stats/.cool, merge libraries, .mcool
+  - pairs2hic               # merged pairs -> .hic (juicer_tools pre)
+  - hic2KR                  # .hic -> KR-normalised contacts for STARE
+  # - set_HIC               # use precomputed .hic / contact dirs (cell_lines.<CELL>.precomputed_*)
+  # - hic_qc                # optional HiCRep SCC between Hi-C libraries
+  # --- Integration ---
+  - ABC_STARE               # ABC scores + TF affinities with STARE
+  - crispri_abc_significant_hits  # replicate-concordant CRISPRi OCRs x ABC contacts
+  - GSEA                    # GSEApy prerank of ABC target genes of JACKS-significant OCRs
+  - dl_encode               # ENCODE tracks for genome-browser figures
+  - TFenrich                # UniBind enrichment of significant OCRs (UniBind universe)
+  - TFenrich_OCR_universe   # UniBind enrichment of significant OCRs vs. all cell-line OCRs
+
+# -------------------------------------------------------------------------------------
+# General paths
+# -------------------------------------------------------------------------------------
+results: results            # all outputs: results/<CELL>/...
+resources: resources        # downloaded references and tools
+
+samples:
+  crispr: config/crispr_samples.tsv   # one row per screen FASTQ (replicate x time point)
+  hic: config/hic_samples.tsv         # one row per SRA run: cell_line, replicate (=library), run
+
+# -------------------------------------------------------------------------------------
+# Cell lines. Keys must match the cell_line column of the sample sheets.
+# -------------------------------------------------------------------------------------
+cell_lines:
+  RWPE:
+    # Directory with the demultiplexed screen FASTQs listed in crispr_samples.tsv
+    # (<prefix>_R1_001.fastq.gz = guide read, <prefix>_R2_001.fastq.gz = RSL read).
+    fastq_dir: data/crispr/RWPE
+    # sgRNA library (no header: sgRNA_id,protospacer,OCR_id) and OCR coordinate table
+    # (tab-separated; columns N20, Coord_<CELL>, Peak ID, Guide ID). See resources/README.md.
+    library: resources/crispr/LibraryFile_RWPE.csv
+    coords: resources/crispr/Final_List_RWPE.csv
+    neg_con: NCR            # prefix of non-targeting/negative-control guide sets
+    # ENCODE/Duke DNase-seq peaks (hg19); downloaded automatically from UCSC.
+    dnase_peaks: resources/encode/wgEncodeOpenChromDnaseRwpe1Pk.narrowPeak
+    # Only used with module set_HIC (leave null to process Hi-C from SRA):
+    precomputed_hic: null
+    precomputed_contacts: null
+  HMEC:
+    fastq_dir: data/crispr/HMEC
+    library: resources/crispr/LibraryFile_Me16C.csv
+    coords: resources/crispr/Final_List_HMEC.csv
+    neg_con: NCH
+    dnase_peaks: resources/encode/wgEncodeOpenChromDnaseHmecPk.narrowPeak
+    # The original analysis used the published Rao et al. 2014 map instead of
+    # reprocessing; to reproduce that, enable set_HIC and set:
+    #   precomputed_hic: resources/hic/GSE63525_HMEC_combined.hic   (downloaded automatically)
+    precomputed_hic: null
+    precomputed_contacts: null
+
+# -------------------------------------------------------------------------------------
+# Reference genome and annotation (hg19 / GRCh37 throughout)
+# -------------------------------------------------------------------------------------
+reference:
+  build: hg19
+  fasta_url: http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/latest/hg19.fa.gz
+  gtf_url: https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_48/GRCh37_mapping/gencode.v48lift37.annotation.gtf.gz
+  chain_hg19_to_hg38_url: https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
+  dnase_url_template: https://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeOpenChromDnase/{name}.narrowPeak.gz
+
+# -------------------------------------------------------------------------------------
+# CRISPRi screen
+# -------------------------------------------------------------------------------------
+crispr:
+  stages: [D4, D14]                 # [reference/early, late] time point
+  crisprcounter:
+    jar: resources/tools/CrisprCounter.jar   # not redistributable, see README
+    template: resources/crisprcounter_template.properties
+    java_mem_gb: 32
+  rsl_bin_nt: 3                     # RSL prefix length used to bin RSLs (4^3 = 64 bins)
+  rsl_bin_min_count: 0              # min. count (control or treatment) to keep an RSL
+  ssmd:
+    min_control_count: 1            # RSLC IRA-SSMD arg 3 (old key SSMD_trunclen)
+    filter_on_sum: 0                # RSLC IRA-SSMD arg 4 (old key SSMD_mincount)
+  positive_controls: resources/positive_control_genes.txt
+  pathway:
+    permutations: 1000000           # mageck pathway --permutation
+    ranking_column: 7               # SSMD table column used for ranking
+
+# -------------------------------------------------------------------------------------
+# JACKS
+# -------------------------------------------------------------------------------------
+jacks:
+  run_jacks_url: https://raw.githubusercontent.com/felicityallen/JACKS/dd5c4be5e83baa5ee79a589b0a8c3a2ac3f7d6ad/jacks/run_JACKS.py
+  ctrl_sample: Control
+  sgrna_hdr: sgRNA
+  gene_hdr: open_reg
+  fdr_threshold: 0.05
+
+# -------------------------------------------------------------------------------------
+# Hi-C processing (4DN / Open2C best practice)
+# -------------------------------------------------------------------------------------
+hic:
+  max_spots: null                   # set e.g. 5000000 to subsample each run (testing)
+  sra_max_size: 200g                # prefetch --max-size
+  threads:
+    bwa: 32
+    sort: 16
+    pairtools: 8
+  parse_options: "--min-mapq 30 --walks-policy 5unique --max-inter-align-gap 30 --add-columns mapq --drop-sam --drop-seq"
+  dedup_max_mismatch: 3             # bp; pairtools dedup --max-mismatch
+  cooler_base_resolution: 1000
+  zoomify_resolutions: "1000,2000,5000,10000,25000,50000,100000,250000,500000,1000000"
+  qc_resolution: 100000             # per-library .cool used for QC / HiCRep
+  hicrep:                           # module hic_qc
+    h: 1
+    dbpmax: 5000000
+  juicer:
+    jar: resources/tools/juicer_tools_1.22.01.jar
+    url: https://s3.amazonaws.com/hicfiles.tc4ga.com/public/juicer/juicer_tools_1.22.01.jar
+    memory_mb: 48000
+    threads: 16
+  kr:
+    norm: KR
+    bin_size: 5000
+    chromosomes: ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","X"]
+  precomputed_hic_urls:             # used when a precomputed_hic path matches a key below
+    resources/hic/GSE63525_HMEC_combined.hic: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE63nnn/GSE63525/suppl/GSE63525_HMEC_combined.hic
+
+# -------------------------------------------------------------------------------------
+# ABC / STARE. Each run = one enhancer-activity source scored with the cell line's
+# Hi-C contacts. Output: results/<CELL>/abc_stare/<run>/
+#   activity: dnase | jacks_fdr | jacks_all
+#   column:   STARE -n (activity column(s) in the BED)
+#   tss:      STARE -i (all_tss | 5_tss)
+#   gtf:      all | protein_coding
+# -------------------------------------------------------------------------------------
+abc_stare:
+  psem_url: https://raw.githubusercontent.com/SchulzLab/STARE/main/PWMs/2.2/Jaspar_Hocomoco_Kellis_human_transfac.txt
+  threads: 32
+  runs:
+    dnase:             {activity: dnase,     column: "7",  tss: all_tss, gtf: all}
+    jacks_fdr:         {activity: jacks_fdr, column: "5+", tss: 5_tss,   gtf: all}
+    jacks_all:         {activity: jacks_all, column: "5+", tss: 5_tss,   gtf: all}
+    jacks_fdr_protein: {activity: jacks_fdr, column: "5+", tss: 5_tss,   gtf: protein_coding}
+
+# -------------------------------------------------------------------------------------
+# CRISPRi x ABC significant hits (also produces the BED used by TF enrichment)
+# -------------------------------------------------------------------------------------
+crispri_hits:
+  abc_run: dnase
+
+# -------------------------------------------------------------------------------------
+# GSEA (GSEApy prerank of genes ranked by summed ABC score of JACKS-significant OCRs)
+# -------------------------------------------------------------------------------------
+gsea:
+  abc_run: jacks_fdr_protein
+  permutations: 1000
+  gene_sets:
+    - KEGG_2021_Human
+    - GO_Biological_Process_2025
+    - Reactome_Pathways_2024
+    - MSigDB_Hallmark_2020
+    - MSigDB_Oncogenic_Signatures
+    - Chromosome_Location_hg19
+
+# -------------------------------------------------------------------------------------
+# Genome tracks (pyGenomeTracks). Region name -> UCSC-style region.
+# -------------------------------------------------------------------------------------
+genome_tracks:
+  regions:
+    R11692_ENHANCER: "chr7:32029761-33030308"   # OCR R11692 +/- 500 kb
+
+# -------------------------------------------------------------------------------------
+# ENCODE downloads (module dl_encode) -> resources/encode/<name>.<ext>
+# -------------------------------------------------------------------------------------
+encode:
+  RWPE_H3K27ac_ENCFF889LYR.bigWig: https://www.encodeproject.org/files/ENCFF889LYR/@@download/ENCFF889LYR.bigWig
+
+# -------------------------------------------------------------------------------------
+# UniBind TF enrichment (modules TFenrich, TFenrich_OCR_universe)
+# -------------------------------------------------------------------------------------
+unibind:
+  # bin/UniBind_enrich.sh from https://bitbucket.org/CBGR/unibind_enrichment
+  enrich_script: resources/unibind_enrichment/bin/UniBind_enrich.sh
+  # Singularity/Apptainer image with the tool's dependencies (run with --use-singularity);
+  # set to null to run with a locally deployed unibind_enrichment instead.
+  container: resources/unibind_enrichment_0.2.sif
+  # LOLA databases from Zenodo (doi:10.5281/zenodo.4161027)
+  lola_db: resources/unibind/hg38_robust_UniBind_LOLA.RDS
+  lola_universe: resources/unibind/hg38_robust_UniBind_LOLA_universe.RDS
