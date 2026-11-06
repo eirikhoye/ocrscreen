@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this workflow, please cite the paper below (citation details to be added)."
+title: "ocrscreen: CRISPRi screening of open chromatin regions in RWPE-1 and HMEC cells"
+type: software
+authors:
+  - family-names: "Høye"
+    given-names: "Eirik"
+    email: "eirikhoye@gmail.com"
+license: MIT
+repository-code: "<REPOSITORY URL TBD>"
+preferred-citation:
+  type: article
+  title: "<TITLE TBD>"
+  authors:
+    - family-names: "Høye"
+      given-names: "Eirik"
+  doi: "<DOI TBD>"
+  journal: "<JOURNAL TBD>"
+  year: 2026

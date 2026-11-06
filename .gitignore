@@ -1,0 +1,26 @@
+# Workflow outputs and downloaded resources
+results/*
+!results/.gitkeep
+resources/*
+!resources/README.md
+!resources/crisprcounter_template.properties
+!resources/positive_control_genes.txt
+data/
+logs/
+benchmarks/
+
+# Snakemake
+.snakemake/
+.snakemake_timestamp
+
+# Python / editors / OS
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+nohup.out
