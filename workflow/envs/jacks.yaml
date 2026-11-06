@@ -1,0 +1,13 @@
+# JACKS (https://github.com/felicityallen/JACKS), pinned to the commit used for the
+# paper run (dd5c4be). run_JACKS.py itself is downloaded by rule get_run_jacks.
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10.18
+  - numpy=1.25.2
+  - scipy=1.9.3
+  - matplotlib=3.10.0
+  - pip
+  - pip:
+      - "jacks @ git+https://github.com/felicityallen/JACKS.git@dd5c4be5e83baa5ee79a589b0a8c3a2ac3f7d6ad#subdirectory=jacks"

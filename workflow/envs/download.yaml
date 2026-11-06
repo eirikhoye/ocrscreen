@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - wget=1.21.4
+  - gzip
+  - gawk

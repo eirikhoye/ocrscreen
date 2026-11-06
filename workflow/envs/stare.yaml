@@ -1,0 +1,12 @@
+# STARE (ABC-score + TF affinities; https://github.com/SchulzLab/STARE).
+# Provides STARE.sh and Juicebox_normalization.sh. openjdk is needed by the
+# juicer_tools jar that Juicebox_normalization.sh calls.
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - stare-abc=1.0.5
+  - bedtools=2.31.1
+  - openjdk=17
+  - python=3.11

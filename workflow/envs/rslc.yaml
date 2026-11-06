@@ -1,0 +1,10 @@
+# R environment for the RSLC SSMD script (IRA-SSMD_modded.R).
+# The paper run used the cluster module R/4.3.2 with reshape2 and plyr.
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - r-base=4.3.2
+  - r-reshape2=1.4.4
+  - r-plyr=1.8.9
+  - sed

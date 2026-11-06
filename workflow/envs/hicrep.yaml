@@ -1,0 +1,11 @@
+# Optional Hi-C replicate reproducibility (stratum-adjusted correlation, HiCRep).
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.11
+  - cooler=0.10.4
+  - pip
+  - pip:
+      - hicrep==0.2.6

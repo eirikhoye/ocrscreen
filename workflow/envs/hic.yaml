@@ -1,0 +1,13 @@
+# Hi-C alignment and pairs/cooler processing. Versions as used in hic_abc
+# (bwa-mem2 2.2.1, pairtools 1.1.2, cooler 0.10.4).
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.11
+  - bwa-mem2=2.2.1
+  - samtools=1.21
+  - pairtools=1.1.2
+  - cooler=0.10.4
+  - pigz=2.8

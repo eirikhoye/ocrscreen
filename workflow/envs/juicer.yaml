@@ -1,0 +1,6 @@
+# Java runtime for juicer_tools (jar downloaded by rule get_juicer_tools).
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - openjdk=17
