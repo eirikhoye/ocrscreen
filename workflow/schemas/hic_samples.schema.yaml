@@ -1,0 +1,19 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: Hi-C sample sheet (config/hic_samples.tsv), one row per sequencing run
+type: object
+properties:
+  cell_line:
+    type: string
+  replicate:
+    type: string
+    description: library / biological replicate; runs sharing it are merged before deduplication
+    pattern: "^[^/.]+$"
+  run:
+    type: string
+    description: SRA run accession
+    pattern: "^[SED]RR[0-9]+$"
+  geo_sample:
+    type: string
+  description:
+    type: string
+required: [cell_line, replicate, run]

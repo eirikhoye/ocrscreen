@@ -1,0 +1,217 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: ocrscreen configuration (see config/README.md)
+type: object
+
+definitions:
+  nullable_path:
+    type: [string, "null"]
+
+properties:
+  modules:
+    type: array
+    items:
+      type: string
+      enum:
+        - crispr_library
+        - RSL_counter
+        - pathway
+        - ssmd2bed
+        - JACKS
+        - GenomeTracks
+        - sra
+        - bwa
+        - pairtools
+        - pairs2hic
+        - hic2KR
+        - set_HIC
+        - hic_qc
+        - ABC_STARE
+        - crispri_abc_significant_hits
+        - GSEA
+        - dl_encode
+        - TFenrich
+        - TFenrich_OCR_universe
+    uniqueItems: true
+
+  results: {type: string}
+  resources: {type: string}
+
+  samples:
+    type: object
+    properties:
+      crispr: {type: string}
+      hic: {type: string}
+    required: [crispr, hic]
+
+  cell_lines:
+    type: object
+    minProperties: 1
+    additionalProperties:
+      type: object
+      properties:
+        fastq_dir: {type: string}
+        library: {type: string}
+        coords: {type: string}
+        neg_con: {type: string}
+        dnase_peaks: {type: string}
+        precomputed_hic: {$ref: "#/definitions/nullable_path"}
+        precomputed_contacts: {$ref: "#/definitions/nullable_path"}
+      required: [fastq_dir, library, coords, neg_con, dnase_peaks]
+
+  reference:
+    type: object
+    properties:
+      build: {type: string}
+      fasta_url: {type: string}
+      gtf_url: {type: string}
+      chain_hg19_to_hg38_url: {type: string}
+      dnase_url_template: {type: string}
+    required: [build, fasta_url, gtf_url, chain_hg19_to_hg38_url, dnase_url_template]
+
+  crispr:
+    type: object
+    properties:
+      stages:
+        type: array
+        items: {type: string}
+        minItems: 2
+        maxItems: 2
+      crisprcounter:
+        type: object
+        properties:
+          jar: {type: string}
+          template: {type: string}
+          java_mem_gb: {type: integer, minimum: 1}
+        required: [jar, template, java_mem_gb]
+      rsl_bin_nt: {type: integer, minimum: 1}
+      rsl_bin_min_count: {type: integer, minimum: 0}
+      ssmd:
+        type: object
+        properties:
+          min_control_count: {type: number, minimum: 0}
+          filter_on_sum: {type: integer, enum: [0, 1]}
+        required: [min_control_count, filter_on_sum]
+      positive_controls: {type: string}
+      pathway:
+        type: object
+        properties:
+          permutations: {type: integer, minimum: 1}
+          ranking_column: {type: integer, minimum: 1}
+        required: [permutations, ranking_column]
+    required: [stages, crisprcounter, rsl_bin_nt, rsl_bin_min_count, ssmd, positive_controls, pathway]
+
+  jacks:
+    type: object
+    properties:
+      run_jacks_url: {type: string}
+      ctrl_sample: {type: string}
+      sgrna_hdr: {type: string}
+      gene_hdr: {type: string}
+      fdr_threshold: {type: number, exclusiveMinimum: 0, maximum: 1}
+    required: [run_jacks_url, ctrl_sample, sgrna_hdr, gene_hdr, fdr_threshold]
+
+  hic:
+    type: object
+    properties:
+      max_spots: {type: [integer, "null"], minimum: 1}
+      sra_max_size: {type: string}
+      threads:
+        type: object
+        properties:
+          bwa: {type: integer, minimum: 1}
+          sort: {type: integer, minimum: 1}
+          pairtools: {type: integer, minimum: 1}
+        required: [bwa, sort, pairtools]
+      parse_options: {type: string}
+      dedup_max_mismatch: {type: integer, minimum: 0}
+      cooler_base_resolution: {type: integer, minimum: 1}
+      zoomify_resolutions: {type: string}
+      qc_resolution: {type: integer, minimum: 1}
+      hicrep:
+        type: object
+        properties:
+          h: {type: integer, minimum: 0}
+          dbpmax: {type: integer, minimum: 1}
+        required: [h, dbpmax]
+      juicer:
+        type: object
+        properties:
+          jar: {type: string}
+          url: {type: string}
+          memory_mb: {type: integer, minimum: 1000}
+          threads: {type: integer, minimum: 1}
+        required: [jar, memory_mb, threads]
+      kr:
+        type: object
+        properties:
+          norm: {type: string, enum: [KR, VC, VC_SQRT, SCALE, NONE]}
+          bin_size: {type: integer, minimum: 1}
+          chromosomes:
+            type: array
+            items: {type: string}
+        required: [norm, bin_size, chromosomes]
+      precomputed_hic_urls:
+        type: [object, "null"]
+        additionalProperties: {type: string}
+    required: [threads, parse_options, dedup_max_mismatch, cooler_base_resolution,
+               zoomify_resolutions, qc_resolution, hicrep, juicer, kr]
+
+  abc_stare:
+    type: object
+    properties:
+      psem_url: {type: string}
+      threads: {type: integer, minimum: 1}
+      runs:
+        type: object
+        minProperties: 1
+        additionalProperties:
+          type: object
+          properties:
+            activity: {type: string, enum: [dnase, jacks_fdr, jacks_all]}
+            column: {type: string}
+            tss: {type: string, enum: [all_tss, 5_tss]}
+            gtf: {type: string, enum: [all, protein_coding]}
+          required: [activity, column, tss, gtf]
+    required: [psem_url, threads, runs]
+
+  crispri_hits:
+    type: object
+    properties:
+      abc_run: {type: string}
+    required: [abc_run]
+
+  gsea:
+    type: object
+    properties:
+      abc_run: {type: string}
+      permutations: {type: integer, minimum: 1}
+      gene_sets:
+        type: array
+        items: {type: string}
+    required: [abc_run, permutations, gene_sets]
+
+  genome_tracks:
+    type: object
+    properties:
+      regions:
+        type: object
+        additionalProperties:
+          type: string
+          pattern: "^[^:]+:[0-9]+-[0-9]+$"
+    required: [regions]
+
+  encode:
+    type: [object, "null"]
+    additionalProperties: {type: string}
+
+  unibind:
+    type: object
+    properties:
+      enrich_script: {type: string}
+      container: {type: [string, "null"]}
+      lola_db: {type: string}
+      lola_universe: {type: string}
+    required: [enrich_script, lola_db, lola_universe]
+
+required: [modules, results, resources, samples, cell_lines, reference, crispr, jacks,
+           hic, abc_stare, crispri_hits, gsea, genome_tracks, unibind]

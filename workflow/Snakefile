@@ -1,0 +1,58 @@
+"""
+ocrscreen — CRISPRi screening of open chromatin regions (OCRs) in RWPE-1 and HMEC,
+integrated with Hi-C-based ABC (STARE) enhancer–gene predictions and TF enrichment.
+
+Run from the repository root:
+
+    snakemake --use-conda --cores <N> --configfile config/config.yaml
+
+Modules are switched on/off with the ``modules:`` list in the config; see README.md
+and config/README.md.
+"""
+
+from snakemake.utils import min_version, validate
+
+min_version("8.0")
+
+
+configfile: "config/config.yaml"
+
+
+validate(config, "schemas/config.schema.yaml")
+
+
+# -------------------------------------------------------------------------------------
+# Shared definitions (sample sheets, paths, target collection)
+# -------------------------------------------------------------------------------------
+include: "rules/common.smk"
+# Reference/tool download rules; only run when a module needs their outputs.
+include: "rules/resources.smk"
+
+
+# -------------------------------------------------------------------------------------
+# Modules enabled in config['modules'] (one rule file per module)
+# -------------------------------------------------------------------------------------
+for rule_file in module_rule_files(MODULES):
+
+    include: f"rules/{rule_file}.smk"
+
+
+# -------------------------------------------------------------------------------------
+# Final targets
+# -------------------------------------------------------------------------------------
+rule all:
+    input:
+        get_final_output(MODULES),
+    default_target: True
+
+
+onstart:
+    print(f"\n--- ocrscreen: running modules {', '.join(MODULES)} ---\n")
+
+
+onsuccess:
+    print("\n--- Workflow finished! ---\n")
+
+
+onerror:
+    print("\n--- An error occurred! ---\n")

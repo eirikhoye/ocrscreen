@@ -1,0 +1,28 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: CRISPRi screen sample sheet (config/crispr_samples.tsv), one row per FASTQ
+type: object
+properties:
+  sample:
+    type: string
+    description: screen replicate id, <cell_line>_<replicate> (e.g. RWPE_R1)
+    pattern: "^[A-Za-z0-9]+_[A-Za-z0-9]+$"
+  cell_line:
+    type: string
+  replicate:
+    type: string
+  stage:
+    type: string
+    description: time point; must be one of crispr.stages
+  label:
+    type: string
+    description: CrisprCounter sample (column) name, <sample>_<stage>
+  group:
+    type: string
+  control:
+    type: string
+    description: JACKS control sample, <cell_line>_<reference stage>
+  fastq:
+    type: string
+    description: guide-read FASTQ file name ending in _R1_001.fastq.gz (RSL read = _R2_001)
+    pattern: "_R1_001\\.fastq\\.gz$"
+required: [sample, cell_line, replicate, stage, label, group, control, fastq]
