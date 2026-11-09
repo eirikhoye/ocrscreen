@@ -137,7 +137,13 @@ run with a 48 GB heap).
 
 ```bash
 git clone <repository URL> ocrscreen && cd ocrscreen
-mamba create -n snakemake -c conda-forge -c bioconda 'snakemake>=8' && conda activate snakemake
+# Recommend setting up a new venv using uv
+uv venv
+source .venv/bin/activate
+uv pip install snakemake pandas
+
+# 
+# mamba create -n snakemake -c conda-forge -c bioconda 'snakemake>=8' && conda activate snakemake
 # place private inputs as described in resources/README.md, then check:
 snakemake -n --configfile config/config.yaml
 ```
